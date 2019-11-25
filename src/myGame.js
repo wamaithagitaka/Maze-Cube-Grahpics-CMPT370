@@ -60,19 +60,23 @@ function startGame(state) {
                 break;
 
             case "KeyZ":
-                state.lightIndices.map((index) => {
-                    let light = state.objects[index];
-                    light.strength += 0.5;
+                state.lightIndices.forEach((element) => {
+                    element.strength += 0.5;
                 })
                 break;
 
             case "KeyX":
-                state.lightIndices.map((index) => {
-                    let light = state.objects[index];
-                    light.strength -= 0.5;
+                state.lightIndices.forEach((element) => {
+                    element.strength -= 0.5;
                 })
                 break;
-
+            case "KeyE":
+                sortedObjects = null;
+                break;
+            case "KeyQ":
+                console.log(state.centerObject);
+                mat4.rotateX(state.centerObject.model.rotation, state.centerObject.model.rotation, 45 * (Math.PI / 180));
+                break;
             default:
                 break;
         }

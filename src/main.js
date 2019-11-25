@@ -148,6 +148,15 @@ function main() {
                 ambient += (ambientVal * uLightColours[i]) * uLightStrengths[i];
                 //diffuse
                 float NdotL = max(dot(lightDirection, normal), 0.0);
+                /*
+                vec3 mixedColor = vec3(0,0,0);
+                if (samplerExists == 1){
+                    vec4 textureColor = texture(uTexture, oUV);
+                    mixedColor = mix(diffuseVal, (textureColor.rgb), 0.50);
+                } else {
+                    mixedColor = diffuseVal;
+                }
+                */
                 diffuse += ((diffuseVal * uLightColours[i]) * NdotL * uLightStrengths[i]) / lightDistance;
                 //specular
                 vec3 nCameraPosition = normalize(uCameraPosition); // Normalize the camera position
@@ -162,9 +171,9 @@ function main() {
             }
             vec4 textureColor = texture(uTexture, oUV);
             if (samplerExists == 1) {
-                fragColor = vec4((ambient + diffuse + specular) * textureColor.rgb, 1.0);
+                fragColor = vec4((ambient + diffuse + specular) * textureColor.rgb, alphaVal);
             } else {
-                fragColor = vec4(ambient + diffuse + specular, 1.0);
+                fragColor = vec4(ambient + diffuse + specular, alphaVal);
             }
             
         }
@@ -192,10 +201,28 @@ function main() {
             roll: 0
         },
         samplerExists: 0,
-        samplerNormExists: 0
+        samplerNormExists: 0,
+        centerObject: null,
+        playerObject: null,
     };
 
     state.numLights = state.lights.length;
+
+    //temporary UGGGGGHHHH
+    //let temp = 0;
+    var world = generateScene(gl, vertShaderSample, fragShaderSample);
+    for (var property in world.objects)
+    {
+        //if (temp === 0) {console.log(world.objects[property])}
+        world.objects[property].forEach((element) => {
+            addObjectToScene(state, element);
+        })
+    }
+    //console.log(world);
+    addObjectToScene(state, world.centerObject);
+    state.centerObject = world.centerObject;
+
+    //console.log(state.objects);
 
     //iterate through the level's objects and add them
     state.level.objects.map((object) => {
@@ -242,8 +269,15 @@ function main() {
 function addObjectToScene(state, object) {
     //console.log(object);
     if (object.type === "light") {
-        state.lightIndices.push(state.objectCount);
+        state.lightIndices.push({
+            model: {
+                position: object.model.position,
+            },
+            colour: object.colour,
+            strength: object.strength,
+        });
         state.numLights++;
+        //console.log(state.lightIndices);
     }
 
     object.name = object.name;
@@ -297,13 +331,13 @@ function startRendering(gl, state) {
                 vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
             }
 
-            let apple = getObject(state, "apple");
+            /*let apple = getObject(state, "apple");
             let alien = getObject(state, "alien");
-
-            apple.centroid = alien.model.position;
-            mat4.rotateY(apple.model.rotation, apple.model.rotation, 0.3 * deltaTime);
-
-
+            apple.parent = alien;
+            apple.centroid = apple.parent.model.position;
+            mat4.rotateY(apple.model.rotation, apple.model.rotation, 5 * deltaTime);
+            mat4.rotateX(alien.model.rotation, alien.model.rotation, 1 * deltaTime);
+*/
             // Draw our scene
             drawScene(gl, deltaTime, state);
         }
@@ -315,7 +349,7 @@ function startRendering(gl, state) {
     // Draw the scene
     requestAnimationFrame(render);
 }
-
+//var dbug = 0;
 /**
  * 
  * @param {gl context} gl 
@@ -323,29 +357,73 @@ function startRendering(gl, state) {
  * @param {object - contains the state for the scene} state 
  * @purpose Iterate through game objects and render the objects aswell as update uniforms
  */
+var sortedObjects = null; //limit calls because constantly sorting is unnecessary
 function drawScene(gl, deltaTime, state) {
+    if (sortedObjects === null) {
+        sortedObjects = state.objects.sort((a, b) => {
+            var h = vec3.distance(state.camera.position, a.model.position);
+            var k = vec3.distance(state.camera.position, b.model.position);
+            
+            return k - h;
+        });        
+    }
+    
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.enable(gl.DEPTH_TEST); // Enable depth testing
     gl.depthFunc(gl.LEQUAL); // Near things obscure far things
     gl.clearDepth(1.0); // Clear everything
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
     let lightPositionArray = [], lightColourArray = [], lightStrengthArray = [];
 
+    gl.depthMask(false);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE_MINUS_CONSTANT_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    
+    
     for (let i = 0; i < state.lightIndices.length; i++) {
-        let light = state.objects[state.lightIndices[i]];
-        for (let j = 0; j < 3; j++) {
-            lightPositionArray.push(light.model.position[j]);
-            lightColourArray.push(light.colour[j]);
+        // let light = state.objects[state.lightIndices[i]];
+        let light = state.lightIndices[i];
+        if (light != null){
+            for (let j = 0; j < 3; j++) {
+                lightPositionArray.push(light.model.position[j]);
+                lightColourArray.push(light.colour[j]);
+            }
+            lightStrengthArray.push(light.strength);
         }
-        lightStrengthArray.push(light.strength);
     }
 
-    state.objects.map((object) => {
+    sortedObjects.map((object) => {
         if (object.loaded) {
-
+            // if (object.type === "light") {
+            //     let light = object;
+            //     console.log(light);
+            //     for (let j = 0; j < 3; j++) {
+            //         lightPositionArray.push(light.model.position[j]);
+            //         lightColourArray.push(light.colour[j]);
+            //     }
+            //     lightStrengthArray.push(light.strength);
+            // }
             gl.useProgram(object.programInfo.program);
             {
+                //console.log(object.alpha);
+                if (object.material.alpha < 1.0) {
+                    // TODO turn off depth masking DONE
+                    // enable blending and specify blending function 
+                    // clear depth for correct transparency rendering 
+                    gl.depthMask(false);
+                    gl.enable(gl.BLEND);
+                    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+                }
+                else {
+                    // TODO disable blending 
+                    // enable depth masking and z-buffering
+                    // specify depth function
+                    // clear depth with 1.0
+                    gl.disable(gl.BLEND);
+                    gl.depthMask(true);
+                    gl.enable(gl.DEPTH_TEST);
+                    gl.depthFunc(gl.LEQUAL);
+                }
 
                 var projectionMatrix = mat4.create();
                 var fovy = 60.0 * Math.PI / 180.0; // Vertical field of view in radians
@@ -384,6 +462,10 @@ function drawScene(gl, deltaTime, state) {
 
                 object.modelMatrix = modelMatrix;
 
+                if (object.parent != null) {
+                    mat4.multiply(modelMatrix, object.parent.model.modelMatrix, modelMatrix);
+                }
+
                 var normalMatrix = mat4.create();
                 mat4.invert(normalMatrix, modelMatrix);
                 mat4.transpose(normalMatrix, normalMatrix);
@@ -395,6 +477,7 @@ function drawScene(gl, deltaTime, state) {
                 gl.uniform3fv(object.programInfo.uniformLocations.ambientVal, object.material.ambient);
                 gl.uniform3fv(object.programInfo.uniformLocations.specularVal, object.material.specular);
                 gl.uniform1f(object.programInfo.uniformLocations.nVal, object.material.n);
+                gl.uniform1f(object.programInfo.uniformLocations.alphaVal, object.material.alpha);
 
                 gl.uniform1i(object.programInfo.uniformLocations.numLights, state.numLights);
 
@@ -407,7 +490,7 @@ function drawScene(gl, deltaTime, state) {
                     gl.uniform1fv(object.programInfo.uniformLocations.lightStrengths, lightStrengthArray);
                 }
 
-                {
+                
                     // Bind the buffer we want to draw
                     gl.bindVertexArray(object.buffers.vao);
 
@@ -450,7 +533,7 @@ function drawScene(gl, deltaTime, state) {
                     } else {
                         gl.drawElements(gl.TRIANGLES, object.buffers.numVertices, gl.UNSIGNED_SHORT, offset);
                     }
-                }
+                
             }
         }
     });
