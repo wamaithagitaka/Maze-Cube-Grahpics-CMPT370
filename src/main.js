@@ -331,13 +331,17 @@ function startRendering(gl, state) {
                 vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
             }
 
-            /*let apple = getObject(state, "apple");
-            let alien = getObject(state, "alien");
+            let apple = state.objects.find(element => element.name === "apple");
+            //console.log(apple);
+            let alien = state.objects.find(element => element.name === "alien");
+            //console.log(alien);
+            if (!(apple === undefined || alien === undefined)){
             apple.parent = alien;
-            apple.centroid = apple.parent.model.position;
+            //console.log(apple);
+            apple.centroid = apple.parent.model.position; //this works, so why it dont work on mine?
             mat4.rotateY(apple.model.rotation, apple.model.rotation, 5 * deltaTime);
             mat4.rotateX(alien.model.rotation, alien.model.rotation, 1 * deltaTime);
-*/
+            }
             // Draw our scene
             drawScene(gl, deltaTime, state);
         }
@@ -365,9 +369,8 @@ function drawScene(gl, deltaTime, state) {
             var k = vec3.distance(state.camera.position, b.model.position);
             
             return k - h;
-        });        
+        }); 
     }
-    
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.enable(gl.DEPTH_TEST); // Enable depth testing
     gl.depthFunc(gl.LEQUAL); // Near things obscure far things
@@ -460,11 +463,13 @@ function drawScene(gl, deltaTime, state) {
                 mat4.translate(modelMatrix, modelMatrix, negCentroid);
                 mat4.scale(modelMatrix, modelMatrix, object.model.scale);
 
-                object.modelMatrix = modelMatrix;
+                object.model.modelMatrix = modelMatrix;
 
                 if (object.parent != null) {
                     mat4.multiply(modelMatrix, object.parent.model.modelMatrix, modelMatrix);
                 }
+
+                //object.modelMatrix = modelMatrix;
 
                 var normalMatrix = mat4.create();
                 mat4.invert(normalMatrix, modelMatrix);

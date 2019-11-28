@@ -14,9 +14,10 @@ class Model {
             position: vec3.fromValues(0.0, 0.0, 0.0),
             rotation: mat4.create(),
             scale: vec3.fromValues(1.0, 1.0, 1.0),
-            texture: texture ? getTextures(glContext, texture) : null
+            texture: texture ? getTextures(glContext, texture) : null,
+            modelMatrix: mat4.create(),
         };
-        this.modelMatrix = mat4.create();
+        // this.modelMatrix = mat4.create();
 
         this.lightingShader = this.lightingShader.bind(this);
     }
