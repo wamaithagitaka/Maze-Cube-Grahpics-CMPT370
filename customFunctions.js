@@ -43,12 +43,13 @@ function generateScene(glContext, vertShader, fragShader) {
 	let n = 5.0;
 	let alpha = 0.15;
 
-	let centerPos =  vec3.fromValues(1 + 0.1, 1 + 0.1, 1 + 0.1);
+	let fakeCenterPos =  vec3.fromValues(1 + 0.1, 1 + 0.1, 1 + 0.1);
+	let centerPos =  vec3.fromValues(0, 0, 0);
 	let centerScale = vec3.fromValues(1.0, 1.0, 1.0);
 	let fakeCenterScale = vec3.fromValues(size * 2 - 4 - 0.4, size * 2 - 4 - 0.4, size * 2 - 4 - 0.4);
 	let centerColor = vec3.fromValues(0.8, 0.2, 0.1);
-	scene.centerObject = createCube(glContext, "Center", null, centerColor, diffuse, specular, n, 0.0, centerPos, centerScale, vertShader, fragShader);
-	scene.objects.modelCenter.push(createCube(glContext, "FakeCenter", scene.centerObject, centerColor, diffuse, specular, n, 1.0, centerPos, fakeCenterScale, vertShader, fragShader));
+	scene.centerObject = createCube(glContext, "Center", null, centerColor, diffuse, specular, n, 1.0, centerPos, centerScale, vertShader, fragShader);
+	scene.objects.modelCenter.push(createCube(glContext, "FakeCenter", scene.centerObject, centerColor, diffuse, specular, n, 1.0, fakeCenterPos, fakeCenterScale, vertShader, fragShader));
 	//scene.centerObject.centroid = vec3.fromValues();
 	//console.log(scene.centerObject);
 
@@ -84,26 +85,6 @@ function generateScene(glContext, vertShader, fragShader) {
 			count++;
 		}
 	}
-    // for (var i = 0; i < size; i += 1) {
-    //     scene.world.push([]);
-    //     for (var j = 0; j < size; j += 1) {
-	// 		scene.world[i].push([]);
-    //         for (var k = 0; k < size; k += 1) {
-	// 			let newCube = new Cube(glContext, "WorldCube"+ ((count).toString()));
-	// 			newCube.position = vec3.fromValues(i, j, k);
-	// 			newCube.vertShader = vertShader;
-	// 			newCube.fragShader = fragShader;
-	// 			//newCube.texture = "./materials/plywood.jpg";
-	// 			newCube.setup();
-
-	// 			count++;
-
-	// 			scene.world[i][j].push({
-	// 				...newCube,
-	// 			});
-    //         }
-    //     }
-    // }
 	console.log(scene.objects);
 	return scene;
 }
@@ -118,6 +99,6 @@ function createCube(glContext, name, parent, ambient, diffuse, specular, n, alph
 	cube.model.position = position;
 	cube.setup();
 
-
+	cube.centroid = vec3.fromValues(size/2, size/2, size/2);
 	return cube
 }

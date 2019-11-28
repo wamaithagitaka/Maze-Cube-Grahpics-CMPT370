@@ -204,6 +204,7 @@ function main() {
         samplerNormExists: 0,
         centerObject: null,
         playerObject: null,
+        faces: [],
     };
 
     state.numLights = state.lights.length;
@@ -249,6 +250,21 @@ function main() {
                 tempPlane.scale(object.scale);
             }
             addObjectToScene(state, tempPlane);
+        } else if (object.type === "mazeCube") {
+            let tempCube = new Cube(gl, object.name, object.parent, object.material.ambient, object.material.diffuse, object.material.specular, object.material.n, object.material.alpha, object.texture, object.textureNorm);
+            tempCube.vertShader = vertShaderSample;
+            tempCube.fragShader = fragShaderSample;
+            tempCube.setup();
+            tempCube.model.position = vec3.fromValues(object.position[0], object.position[1], object.position[2]);
+            if (object.scale) {tempCube.scale(object.scale);}
+            if (object.centroid) {tempCube.centroid = object.centroid;}
+            // if (object.face === "front") {
+            //     state.faces.push([
+
+            //     ])
+            // }
+
+            addObjectToScene(state, tempCube);
         }
     })
 
