@@ -35,8 +35,9 @@ function createMesh(mesh, object) {
         addObjectToScene(state, testModel);
         //due to timing issues we're slapping everything here
         state.playerObject = testModel; 
-        setToCubePosition(state, state.playerObject, cubeIndex(1, 2, 0)); 
-        console.log(state.playerObject);
+        setToCubePosition(state, state.playerObject, cubeIndex(Math.floor(size/2), Math.floor(size/2), 0));
+        state.currentPlayerPosition = state.cubes[cubeIndex(Math.floor(size/2), Math.floor(size/2), 0)].model.position;
+        console.log(state);
     } else {
         let testLight = new Light(state.gl, object.name, mesh, object.parent, object.material.ambient, object.material.diffuse, object.material.specular, object.material.n, object.material.alpha, object.colour, object.strength);
         testLight.vertShader = state.vertShaderSample;
@@ -48,6 +49,8 @@ function createMesh(mesh, object) {
         }
 
         addObjectToScene(state, testLight);
+        testLight.centroid = vec3.fromValues(0,0,0);
+        state.lights.push(testLight);
     }
 }
 
@@ -207,8 +210,8 @@ function main() {
         gameStarted: false,
         camera: {
             name: 'camera',
-            position: vec3.fromValues(size/2, size/2, -2 - size/2),
-            center: vec3.fromValues(size/2, size/2, size/2),
+            position: vec3.fromValues(0, 0, -6 - size/2),
+            center: vec3.fromValues(0, 0, 0),
             up: vec3.fromValues(0.0, 1.0, 0.0),
             pitch: 0,
             yaw: 0,
@@ -220,33 +223,21 @@ function main() {
         playerObject: null,
         cubes: null,
         playerMoving: {},
-        // faces: {
-        //     front: [],
-        //     back: [],
-        //     up: [],
-        //     down: [],
-        //     left: [],
-        //     right: [],
-        // },
+        currentPlayerPosition: null,
+        gravity: {
+            position: vec3.fromValues(0.0, 0.0, -1.0),
+            center: vec3.fromValues(0.0, 0.0, 0.0),
+            up: vec3.fromValues(0.0, -1.0, 0.0),
+        },
+        gravityMatrix: null,
+        lights: [],
     };
 
     state.numLights = state.lights.length;
 
-    //temporary UGGGGGHHHH
-    //let temp = 0;
-    /*var world = generateScene(gl, vertShaderSample, fragShaderSample);
-    for (var property in world.objects)
-    {
-        //if (temp === 0) {console.log(world.objects[property])}
-        world.objects[property].forEach((element) => {
-            addObjectToScene(state, element);
-        })
-    }
-    //console.log(world);
-    addObjectToScene(state, world.centerObject);
-    state.centerObject = world.centerObject;*/
-
-    let world = generateScene2(gl, vertShaderSample, fragShaderSample);
+    //UGHHHH
+    //generate scene
+    let world = generateScene(gl, vertShaderSample, fragShaderSample);
     console.log(world);
     world.objects.forEach((element) => 
     {
@@ -258,6 +249,15 @@ function main() {
     addObjectToScene(state, world.fakeCenter);
     state.centerObject = world.centerObject;
     state.cubes = world.objects;
+    //setup gravity matrix
+    state.gravityMatrix = mat4.create();
+    mat4.lookAt(
+        state.gravityMatrix,
+        state.gravity.position,
+        state.gravity.center,
+        state.gravity.up,
+    );
+    logMat4Legibly(state.gravityMatrix);
     //console.log(state.objects);
 
     //iterate through the level's objects and add them
@@ -286,20 +286,9 @@ function main() {
                 tempPlane.scale(object.scale);
             }
             addObjectToScene(state, tempPlane);
-        } /*else if (object.type === "mazeCube") {
-            let tempCube = new Cube(gl, object.name, object.parent, object.material.ambient, object.material.diffuse, object.material.specular, object.material.n, object.material.alpha, object.texture, object.textureNorm);
-            tempCube.vertShader = vertShaderSample;
-            tempCube.fragShader = fragShaderSample;
-            tempCube.setup();
-            tempCube.model.position = vec3.fromValues(object.position[0], object.position[1], object.position[2]);
-            if (object.scale) {tempCube.scale(object.scale);}
-            if (object.centroid) {tempCube.centroid = object.centroid;}
-            if (object.face === "front") {state.faces.front.push(tempCube)}
-            addObjectToScene(state, tempCube);
-        }*/
+        }
     })
 
-    console.log(state);
 
     //setup mouse click listener
     /*
@@ -363,44 +352,51 @@ function startRendering(gl, state) {
             }
 
             if (state.keyboard["w"]) {
-                moveForward(state);
+                //moveForward(state);
             }
             if (state.keyboard["s"]) {
-                moveBackward(state);
+                //moveBackward(state);
             }
             if (state.keyboard["a"]) {
-                moveLeft(state);
+                //moveLeft(state);
             }
             if (state.keyboard["d"]) {
-                moveRight(state);
+                //moveRight(state);
+                //vec3.rotateY(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), 90 * (Math.PI/180));
             }
 
             if (state.mouse['camMove']) {
                 //vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (state.camera.yaw - 0.25) * deltaTime * state.mouse.sensitivity);
-                vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
+                //vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
+                //vec3.rotateY(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
             }
-            /*
-            let apple = state.objects.find(element => element.name === "apple");
-            //console.log(apple);
-            //console.log(alien);
-            if (!(apple === undefined || alien === undefined)){
-            apple.parent = alien;
-            //console.log(apple);
-            apple.centroid = apple.parent.model.position; //this works, so why it dont work on mine?
-            mat4.rotateY(apple.model.rotation, apple.model.rotation, 5 * deltaTime);
-            mat4.rotateX(alien.model.rotation, alien.model.rotation, 1 * deltaTime);
-            }*/
-            //let alien = state.objects.find(element => element.name === "alien");
 
-            //console.log(state.playerObject)
-            //console.log(alien);
+            //UGHHHH
             if (state.playerObject != null)
             {
                 mat4.rotateY(state.playerObject.model.rotation, state.playerObject.model.rotation, 3 * deltaTime);
                 mat4.rotateX(state.playerObject.model.rotation, state.playerObject.model.rotation, 3 * deltaTime);
+                //move only if we're not locked in "animation"
+                if (state.playerMoving != true)
+                {
+                    let grav = logMat4Legibly(state.gravityMatrix);
+                    let nextCubeIndex = cubeIndex(parseInt(state.currentPlayerPosition[0] + size/2 + grav.i[1]), parseInt(state.currentPlayerPosition[1] + size/2 + grav.j[1]), parseInt(state.currentPlayerPosition[2] + size/2 + grav.k[1]));
+                    let nextCube = state.cubes[nextCubeIndex]
+                    
+                    //console.log(nextCubeIndex);
+                    
+                    if (nextCube != null && nextCubeIndex != undefined)
+                    {
+                        setToCubePosition(state, state.playerObject, nextCubeIndex);
+                        state.currentPlayerPosition = nextCube.model.position;
+                    }
+                    //state.playerMoving = true;
+                }
             }
-
-            if ()
+            if (state.lights[0] != undefined && state.lights[1] != undefined){
+                mat4.rotateY(state.lights[0].model.rotation, state.lights[0].model.rotation, 10 * deltaTime);
+                mat4.rotateX(state.lights[1].model.rotation, state.lights[1].model.rotation, 10 * deltaTime);
+            }
             // Draw our scene
             drawScene(gl, deltaTime, state);
         }
@@ -509,7 +505,7 @@ function drawScene(gl, deltaTime, state) {
                 );
                 gl.uniformMatrix4fv(object.programInfo.uniformLocations.view, false, viewMatrix);
 
-               gl.uniform3fv(object.programInfo.uniformLocations.cameraPosition, state.camera.position);
+                gl.uniform3fv(object.programInfo.uniformLocations.cameraPosition, state.camera.position);
 
                 state.viewMatrix = viewMatrix;
 
@@ -556,50 +552,70 @@ function drawScene(gl, deltaTime, state) {
                 }
 
                 
-                    // Bind the buffer we want to draw
-                    gl.bindVertexArray(object.buffers.vao);
+                // Bind the buffer we want to draw
+                gl.bindVertexArray(object.buffers.vao);
 
-                    //check for diffuse texture and apply it
-                    if (object.model.texture != null) {
-                        state.samplerExists = 1;
-                        gl.activeTexture(gl.TEXTURE0);
-                        gl.uniform1i(object.programInfo.uniformLocations.samplerExists, state.samplerExists);
-                        gl.uniform1i(object.programInfo.uniformLocations.sampler, 0);
-                        gl.bindTexture(gl.TEXTURE_2D, object.model.texture);
-                        
-                    } else {
-                        gl.activeTexture(gl.TEXTURE0);
-                        state.samplerExists = 0;
-                        gl.uniform1i(object.programInfo.uniformLocations.samplerExists, state.samplerExists);
-                        gl.bindTexture(gl.TEXTURE_2D, null);
-                    }
+                //check for diffuse texture and apply it
+                if (object.model.texture != null) {
+                    state.samplerExists = 1;
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.uniform1i(object.programInfo.uniformLocations.samplerExists, state.samplerExists);
+                    gl.uniform1i(object.programInfo.uniformLocations.sampler, 0);
+                    gl.bindTexture(gl.TEXTURE_2D, object.model.texture);
+                    
+                } else {
+                    gl.activeTexture(gl.TEXTURE0);
+                    state.samplerExists = 0;
+                    gl.uniform1i(object.programInfo.uniformLocations.samplerExists, state.samplerExists);
+                    gl.bindTexture(gl.TEXTURE_2D, null);
+                }
 
-                    //check for normal texture and apply it
-                    if (object.model.textureNorm != null) {
-                        state.samplerNormExists = 1;
-                        gl.activeTexture(gl.TEXTURE1);
-                        gl.uniform1i(object.programInfo.uniformLocations.normalSamplerExists, state.samplerNormExists);
-                        gl.uniform1i(object.programInfo.uniformLocations.normalSampler, 1);
-                        gl.bindTexture(gl.TEXTURE_2D, object.model.textureNorm);
-                        //console.log("here")
-                    } else {
-                        gl.activeTexture(gl.TEXTURE1);
-                        state.samplerNormExists = 0;
-                        gl.uniform1i(object.programInfo.uniformLocations.normalSamplerExists, state.samplerNormExists);
-                        gl.bindTexture(gl.TEXTURE_2D, null);
-                    }
+                //check for normal texture and apply it
+                if (object.model.textureNorm != null) {
+                    state.samplerNormExists = 1;
+                    gl.activeTexture(gl.TEXTURE1);
+                    gl.uniform1i(object.programInfo.uniformLocations.normalSamplerExists, state.samplerNormExists);
+                    gl.uniform1i(object.programInfo.uniformLocations.normalSampler, 1);
+                    gl.bindTexture(gl.TEXTURE_2D, object.model.textureNorm);
+                    //console.log("here")
+                } else {
+                    gl.activeTexture(gl.TEXTURE1);
+                    state.samplerNormExists = 0;
+                    gl.uniform1i(object.programInfo.uniformLocations.normalSamplerExists, state.samplerNormExists);
+                    gl.bindTexture(gl.TEXTURE_2D, null);
+                }
 
-                    // Draw the object
-                    const offset = 0; // Number of elements to skip before starting
+                // Draw the object
+                const offset = 0; // Number of elements to skip before starting
 
-                    //if its a mesh then we don't use an index buffer and use drawArrays instead of drawElements
-                    if (object.type === "mesh" || object.type === "light") {
-                        gl.drawArrays(gl.TRIANGLES, offset, object.buffers.numVertices / 3);
-                    } else {
-                        gl.drawElements(gl.TRIANGLES, object.buffers.numVertices, gl.UNSIGNED_SHORT, offset);
-                    }
+                //if its a mesh then we don't use an index buffer and use drawArrays instead of drawElements
+                if (object.type === "mesh" || object.type === "light") {
+                    gl.drawArrays(gl.TRIANGLES, offset, object.buffers.numVertices / 3);
+                } else {
+                    gl.drawElements(gl.TRIANGLES, object.buffers.numVertices, gl.UNSIGNED_SHORT, offset);
+                }
                 
             }
         }
     });
+}
+
+function logMat4Legibly(matrix)
+{
+    let mat4 = {
+        i: [], //x
+        j: [], //y
+        k: [], //z
+        w: []
+    }
+    for (var i = 0; i < 4; i++)
+    {
+        mat4.i.push(matrix[i]);
+        mat4.j.push(matrix[i + 4]);
+        mat4.k.push(matrix[i + 4 * 2]);
+        mat4.w.push(matrix[i + 4 * 3]);
+    }
+    console.log(mat4);
+
+    return mat4;
 }

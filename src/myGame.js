@@ -22,20 +22,46 @@ function startGame(state) {
         switch (event.code) {
             case "KeyW":
                 state.keyboard[event.key] = true;
+                vec3.rotateX(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), 90 * (Math.PI/180));
+                mat4.rotateY(state.gravityMatrix, state.gravityMatrix,  90 * (Math.PI/180))
+
+                sortedObjects = null;
                 break;
 
             case "KeyS":
                 state.keyboard[event.key] = true;
+                vec3.rotateX(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), -90 * (Math.PI/180));
+                mat4.rotateX(state.gravityMatrix, state.gravityMatrix,  -90 * (Math.PI/180))
+
+                sortedObjects = null;
                 break;
 
             case "KeyA":
                 state.keyboard[event.key] = true;
+                vec3.rotateY(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), -90 * (Math.PI/180));
+                sortedObjects = null;
                 break;
 
             case "KeyD":
                 state.keyboard[event.key] = true;
+                vec3.rotateY(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), 90 * (Math.PI/180));
+                sortedObjects = null;
                 break;
 
+            case "KeyE":
+                vec3.rotateZ(state.camera.up, state.camera.up, vec3.fromValues(0,0,0), 90 * (Math.PI/180));
+                //mat4.rotateZ(state.gravityMatrix, state.gravityMatrix,  90 * (Math.PI/180))
+                sortedObjects = null;
+                break;
+
+            case "KeyQ":
+                vec3.rotateZ(state.camera.up, state.camera.up, vec3.fromValues(0,0,0), -90 * (Math.PI/180));
+                mat4.rotateZ(state.gravityMatrix, state.gravityMatrix,  90 * (Math.PI/180))
+                sortedObjects = null;
+                //console.log(state.camera);
+                //mat4.rotateZ(state.centerObject.model.rotation, state.centerObject.model.rotation, 45 * (Math.PI / 180));
+                break;
+                
             default:
                 break;
         }
@@ -66,17 +92,11 @@ function startGame(state) {
                 break;
 
             case "KeyX":
-                state.lightIndices.forEach((element) => {
-                    element.strength -= 0.5;
-                })
+                // state.lightIndices.forEach((element) => {
+                //     element.strength -= 0.5;
+                // })
                 break;
-            case "KeyE":
-                sortedObjects = null;
-                break;
-            case "KeyQ":
-                console.log(state.centerObject);
-                mat4.rotateX(state.centerObject.model.rotation, state.centerObject.model.rotation, 45 * (Math.PI / 180));
-                break;
+
             default:
                 break;
         }
