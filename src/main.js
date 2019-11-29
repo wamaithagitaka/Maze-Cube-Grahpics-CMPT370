@@ -23,6 +23,20 @@ function createMesh(mesh, object) {
             testModel.scale(object.scale);
         }
         addObjectToScene(state, testModel);
+    } else if (object.type === "player") {
+        let testModel = new Model(state.gl, object.name, mesh, object.parent, object.material.ambient, object.material.diffuse, object.material.specular, object.material.n, object.material.alpha, object.texture);
+        testModel.vertShader = state.vertShaderSample;
+        testModel.fragShader = state.fragShaderSample;
+        testModel.setup();
+        testModel.model.position = object.position;
+        if (object.scale) {
+            testModel.scale(object.scale);
+        }
+        addObjectToScene(state, testModel);
+        //due to timing issues we're slapping everything here
+        state.playerObject = testModel; 
+        setToCubePosition(state, state.playerObject, cubeIndex(1, 2, 0)); 
+        console.log(state.playerObject);
     } else {
         let testLight = new Light(state.gl, object.name, mesh, object.parent, object.material.ambient, object.material.diffuse, object.material.specular, object.material.n, object.material.alpha, object.colour, object.strength);
         testLight.vertShader = state.vertShaderSample;
@@ -193,8 +207,8 @@ function main() {
         gameStarted: false,
         camera: {
             name: 'camera',
-            position: vec3.fromValues(0.5, 0.0, -2.5),
-            center: vec3.fromValues(0.5, 0.0, 0.0),
+            position: vec3.fromValues(size/2, size/2, -2 - size/2),
+            center: vec3.fromValues(size/2, size/2, size/2),
             up: vec3.fromValues(0.0, 1.0, 0.0),
             pitch: 0,
             yaw: 0,
@@ -204,14 +218,23 @@ function main() {
         samplerNormExists: 0,
         centerObject: null,
         playerObject: null,
-        faces: [],
+        cubes: null,
+        playerMoving: {},
+        // faces: {
+        //     front: [],
+        //     back: [],
+        //     up: [],
+        //     down: [],
+        //     left: [],
+        //     right: [],
+        // },
     };
 
     state.numLights = state.lights.length;
 
     //temporary UGGGGGHHHH
     //let temp = 0;
-    var world = generateScene(gl, vertShaderSample, fragShaderSample);
+    /*var world = generateScene(gl, vertShaderSample, fragShaderSample);
     for (var property in world.objects)
     {
         //if (temp === 0) {console.log(world.objects[property])}
@@ -221,15 +244,28 @@ function main() {
     }
     //console.log(world);
     addObjectToScene(state, world.centerObject);
-    state.centerObject = world.centerObject;
+    state.centerObject = world.centerObject;*/
 
+    let world = generateScene2(gl, vertShaderSample, fragShaderSample);
+    console.log(world);
+    world.objects.forEach((element) => 
+    {
+        if (element != null){
+            addObjectToScene(state, element);
+        }
+    })
+    addObjectToScene(state, world.centerObject);
+    addObjectToScene(state, world.fakeCenter);
+    state.centerObject = world.centerObject;
+    state.cubes = world.objects;
     //console.log(state.objects);
 
     //iterate through the level's objects and add them
     state.level.objects.map((object) => {
-        if (object.type === "mesh" || object.type === "light") {
+        if (object.type === "mesh" || object.type === "light" || object.type === "player") {
             parseOBJFileToJSON(object.model, createMesh, object);
-        } else if (object.type === "cube") {
+        } 
+        else if (object.type === "cube") {
             let tempCube = new Cube(gl, object.name, object.parent, object.material.ambient, object.material.diffuse, object.material.specular, object.material.n, object.material.alpha, object.texture, object.textureNorm);
             tempCube.vertShader = vertShaderSample;
             tempCube.fragShader = fragShaderSample;
@@ -250,7 +286,7 @@ function main() {
                 tempPlane.scale(object.scale);
             }
             addObjectToScene(state, tempPlane);
-        } else if (object.type === "mazeCube") {
+        } /*else if (object.type === "mazeCube") {
             let tempCube = new Cube(gl, object.name, object.parent, object.material.ambient, object.material.diffuse, object.material.specular, object.material.n, object.material.alpha, object.texture, object.textureNorm);
             tempCube.vertShader = vertShaderSample;
             tempCube.fragShader = fragShaderSample;
@@ -258,15 +294,12 @@ function main() {
             tempCube.model.position = vec3.fromValues(object.position[0], object.position[1], object.position[2]);
             if (object.scale) {tempCube.scale(object.scale);}
             if (object.centroid) {tempCube.centroid = object.centroid;}
-            // if (object.face === "front") {
-            //     state.faces.push([
-
-            //     ])
-            // }
-
+            if (object.face === "front") {state.faces.front.push(tempCube)}
             addObjectToScene(state, tempCube);
-        }
+        }*/
     })
+
+    console.log(state);
 
     //setup mouse click listener
     /*
@@ -346,10 +379,9 @@ function startRendering(gl, state) {
                 //vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (state.camera.yaw - 0.25) * deltaTime * state.mouse.sensitivity);
                 vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
             }
-
+            /*
             let apple = state.objects.find(element => element.name === "apple");
             //console.log(apple);
-            let alien = state.objects.find(element => element.name === "alien");
             //console.log(alien);
             if (!(apple === undefined || alien === undefined)){
             apple.parent = alien;
@@ -357,7 +389,18 @@ function startRendering(gl, state) {
             apple.centroid = apple.parent.model.position; //this works, so why it dont work on mine?
             mat4.rotateY(apple.model.rotation, apple.model.rotation, 5 * deltaTime);
             mat4.rotateX(alien.model.rotation, alien.model.rotation, 1 * deltaTime);
+            }*/
+            //let alien = state.objects.find(element => element.name === "alien");
+
+            //console.log(state.playerObject)
+            //console.log(alien);
+            if (state.playerObject != null)
+            {
+                mat4.rotateY(state.playerObject.model.rotation, state.playerObject.model.rotation, 3 * deltaTime);
+                mat4.rotateX(state.playerObject.model.rotation, state.playerObject.model.rotation, 3 * deltaTime);
             }
+
+            if ()
             // Draw our scene
             drawScene(gl, deltaTime, state);
         }
@@ -389,6 +432,7 @@ function drawScene(gl, deltaTime, state) {
     }
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.enable(gl.DEPTH_TEST); // Enable depth testing
+    //gl.enable(gl.CULL_FACE);
     gl.depthFunc(gl.LEQUAL); // Near things obscure far things
     gl.clearDepth(1.0); // Clear everything
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
