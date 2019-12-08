@@ -263,13 +263,7 @@ function main() {
     state.cubes = world.objects;
     //setup gravity matrix
     state.gravityMatrix = mat4.create();
-    mat4.invert(state.gravityMatrix, state.gravityMatrix); //rotateRoundZ(state.gravityMatrix, Math.PI);
-    /*mat4.lookAt(
-        state.gravityMatrix,
-        state.gravity.position,
-        state.gravity.center,
-        state.gravity.up,
-    );*/
+    mat4.invert(state.gravityMatrix, state.gravityMatrix); 
     console.log(returnMat4Legibly(state.gravityMatrix));
     //console.log(state.objects);
 
@@ -379,15 +373,41 @@ function startRendering(gl, state) {
             }
 
             //correct camera
-            tmp = returnMat4Logically(state.gravityMatrix);
+            let tmp = returnMat4Logically(state.gravityMatrix);
             state.camera.up = vec3.fromValues(-tmp.y[0], -tmp.y[1], -tmp.y[2]);
             state.camera.position = vec3.fromValues(tmp.z[0], tmp.z[1], tmp.z[2]);
             vec3.scale(state.camera.position, state.camera.position, -9);
 
+
+
             if (state.mouse['camMove']) {
                 //vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (state.camera.yaw - 0.25) * deltaTime * state.mouse.sensitivity);
                 //vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
-                vec3.rotateY(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
+                if (tmp.y[0] != 0)
+                {
+                    //console.log("a")
+                    //need to change negative or not in an if 
+                    vec3.rotateY(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateY * deltaTime * state.mouse.sensitivity))
+                    vec3.rotateX(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
+                }
+                else if (tmp.y[1] != 0)
+                {
+                    //console.log("b")
+
+                    vec3.rotateX(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateY * deltaTime * state.mouse.sensitivity))
+                    vec3.rotateY(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
+                }
+                else if (tmp.y[2] != 0)
+                {
+                    //console.log("c")
+
+                    vec3.rotateY(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateY * deltaTime * state.mouse.sensitivity))
+                    vec3.rotateZ(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
+                }
+                // let forward = vec3.create();
+                // vec3.sub(forward, vec3.fromValues(0,0,0), state.freeCamera.position);
+                // vec3.normalize(forward, forward);
+
                 state.freeCamera.use = true;
                 //sortedObjects = null; //sorting is activated but doesn't do anything
             }
@@ -407,39 +427,30 @@ function startRendering(gl, state) {
                 {
                     let grav = returnMat4Logically(state.gravityMatrix);
                     //player is always offset by half of the cube size (origin at 0, 0, 0; "cube origin/middle" at size/2, size/2, size/2)
-                    //let gridOffset = vec3.fromValues(size/2 + grav.y[0], size/2 + grav.y[1], size/2 + grav.y[0])
-                    //let testPosition = state.targetGridPosition.slice();
-                    //vec3.add(testPosition, state.targetGridPosition, gridOffset);
                     nextCubeIndex = cubeIndex(parseInt(state.targetGridPosition[0] + size/2 + grav.y[0]), parseInt(state.targetGridPosition[1] + size/2 + grav.y[1]), parseInt(state.targetGridPosition[2] + size/2 + grav.y[2]));
-                    //nextCubeIndex = cubeIndex(parseInt(testPosition[0]), parseInt(testPosition[1]), parseInt(testPosition[2]))
                     let nextCube = state.cubes[nextCubeIndex]
-                    // console.log(nextCubeIndex);
-                    // console.log(testPosition);
-                    // console.log(nextCube);
                     if (nextCube != null && nextCubeIndex != undefined)
                     {
-                        //console.log(nextCubeIndex);
-                        //console.log(state.currentPlayerPosition);
-                        //setToCubePosition(state, state.playerObject, nextCubeIndex);
-                        //\\state.targetGridPosition = nextCube.model.position.slice();
-                        //console.log(state.currentPlayerPosition);
+                        //calculate next location to transition to
                         state.nextPlayerPosition = nextCube.model.position.slice();
                         let playerOffset = vec3.fromValues(0.5, 0.5, 0.5);
                         vec3.add(state.nextPlayerPosition, nextCube.model.position, playerOffset);
-                        //state.nextPlayerPosition = vec3.fromValues(nextCube.model.position[0] + 0.5, nextCube.model.position[1] + 0.5, nextCube.model.position[2] + 0.5)
+
                         state.animationState = animation.DROPPING;
                         previousDistance = 50
                         distance = 40;
-                        //console.log(state.nextPlayerPosition);
                     }
+                }
+                else if (state.animationState === animation.ROTATING)
+                { // player keypress activates this animation state first
+                    let grav = returnMat4Logically(state.gravityMatrix);
+
                 }
                 else if (state.animationState === animation.DROPPING)
                 {
                     
                     previousDistance = distance;
                     distance = vec3.distance(state.playerObject.model.position, state.nextPlayerPosition)
-                    //console.log(previousDistance)
-                    //console.log(distance);
                     //player moving down still
                     if (distance <= previousDistance)
                     {
@@ -460,34 +471,7 @@ function startRendering(gl, state) {
                         state.targetGridPosition = state.cubes[nextCubeIndex].model.position.slice();
                         state.animationState = null;
                     }
-                    // console.log(state.playerObject.model.position)
-                    // console.log(state.nextPlayerPosition);
-                    // console.log(vec3.distance(state.playerObject.model.position, state.nextPlayerPosition))
                 }
-                /*else {
-                    //vec3.fromValues(playerInitialPosition[0] + 0.5, playerInitialPosition[1] + 0.5, playerInitialPosition[2] + 0.5);
-                    let temp = vec3.create();
-                    vec3.sub(temp, state.nextPlayerPosition, state.currentPlayerPosition);
-                    // let distance = vec3.create();
-                    // vec3.sub(distance, state.nextPlayerPosition, state.playerObject.model.position);
-                    // let acceptedRange = vec3.create();
-                    // vec3.scale(acceptedRange, temp, 0.1);
-                    let offset = vec3.fromValues(0.5, 0.5, 0.5);
-                    let offsetPlayerPosition = vec3.create();
-                    vec3.add(offsetPlayerPosition, state.playerObject.model.position, offset);
-
-                    console.log(state.nextPlayerPosition);
-                    console.log(offsetPlayerPosition)
-                    console.log(vec3.distance(offsetPlayerPosition, state.nextPlayerPosition));
-                    //vec3.scale(temp, temp, 10);
-                    if (vec3.distance(state.playerObject.model.position, state.nextPlayerPosition) >= 0.1)
-                    {
-                        vec3.add(state.playerObject.model.position, state.playerObject.model.position, temp * deltaTime);
-                    }
-                    else{
-                        state.animation = false;
-                    }
-                }*/
             }
             if (state.lights[0] != undefined && state.lights[1] != undefined){
                 mat4.rotateY(state.lights[0].model.rotation, state.lights[0].model.rotation, 3 * deltaTime);

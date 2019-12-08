@@ -10,6 +10,7 @@ function startGame(state) {
         if (event.buttons == 2) {
             state.mouse['camMove'] = true;
             state.mouse.rateX = event.movementX;
+            state.mouse.rateY = event.movementY;
         }
     });
 
