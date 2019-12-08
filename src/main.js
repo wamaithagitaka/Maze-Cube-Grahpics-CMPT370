@@ -1,7 +1,9 @@
 var total = 0;
 var state = {};
 var stats = new Stats();
-var size = 5;
+var distance = 400;
+var previousDistance = 500;
+var nextCubeIndex;
 
 window.onload = () => {
     parseSceneFile("./statefiles/alienScene.json", state, main);
@@ -38,7 +40,7 @@ function createMesh(mesh, object) {
         //testModel.centroid = vec3.add(testModel.centroid, testModel.centroid, vec3.fromValues(0.5, 0.5, 0.5))
         state.playerObject = testModel; 
         setToCubePosition(state, state.playerObject, cubeIndex(Math.floor(size/2), Math.floor(size/2), 0));
-        state.currentPlayerPosition = state.cubes[cubeIndex(Math.floor(size/2), Math.floor(size/2), 0)].model.position;
+        state.targetGridPosition = state.cubes[cubeIndex(Math.floor(size/2), Math.floor(size/2), 0)].model.position.slice();
         console.log(state);
     } else {
         let testLight = new Light(state.gl, object.name, mesh, object.parent, object.material.ambient, object.material.diffuse, object.material.specular, object.material.n, object.material.alpha, object.colour, object.strength);
@@ -51,7 +53,7 @@ function createMesh(mesh, object) {
         }
 
         addObjectToScene(state, testLight);
-        testLight.centroid = vec3.fromValues(0,0,0);
+        testLight.centroid = vec3.fromValues(0,0,10);
         state.lights.push(testLight);
     }
 }
@@ -224,7 +226,7 @@ function main() {
         playerObject: null,
         cubes: null,
         animationState: null, //animation.DROPPING,
-        currentPlayerPosition: null,
+        targetGridPosition: null,
         gravity: {
             position: vec3.fromValues(0.0, 0.0, -1.0),
             center: vec3.fromValues(0.0, 0.0, 0.0),
@@ -376,6 +378,12 @@ function startRendering(gl, state) {
                 //vec3.rotateY(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), 90 * (Math.PI/180));
             }
 
+            //correct camera
+            tmp = returnMat4Logically(state.gravityMatrix);
+            state.camera.up = vec3.fromValues(-tmp.y[0], -tmp.y[1], -tmp.y[2]);
+            state.camera.position = vec3.fromValues(tmp.z[0], tmp.z[1], tmp.z[2]);
+            vec3.scale(state.camera.position, state.camera.position, -9);
+
             if (state.mouse['camMove']) {
                 //vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (state.camera.yaw - 0.25) * deltaTime * state.mouse.sensitivity);
                 //vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
@@ -387,39 +395,74 @@ function startRendering(gl, state) {
                 state.freeCamera.use = false;
                 //console.log("here");
                 state.freeCamera.position = state.camera.position.slice();
+                state.freeCamera.up = state.camera.up.slice();
             }
-
-            tmp = returnMat4Logically(state.gravityMatrix);
-                state.camera.up = vec3.fromValues(-tmp.y[0], -tmp.y[1], -tmp.y[2]);
-                state.camera.position = vec3.fromValues(tmp.z[0], tmp.z[1], tmp.z[2]);
-                vec3.scale(state.camera.position, state.camera.position, -9);
 
             //UGHHHH
             if (state.playerObject != null)
             {
-                mat4.rotateY(state.playerObject.model.rotation, state.playerObject.model.rotation, 3 * deltaTime);
-                mat4.rotateX(state.playerObject.model.rotation, state.playerObject.model.rotation, 3 * deltaTime);
+                
                 //move only if we're not locked in "animation"
                 if (state.animationState === null)
                 {
                     let grav = returnMat4Logically(state.gravityMatrix);
-                    let nextCubeIndex = cubeIndex(parseInt(state.currentPlayerPosition[0] + size/2 + grav.y[0]), parseInt(state.currentPlayerPosition[1] + size/2 + grav.y[1]), parseInt(state.currentPlayerPosition[2] + size/2 + grav.y[2]));
+                    //player is always offset by half of the cube size (origin at 0, 0, 0; "cube origin/middle" at size/2, size/2, size/2)
+                    //let gridOffset = vec3.fromValues(size/2 + grav.y[0], size/2 + grav.y[1], size/2 + grav.y[0])
+                    //let testPosition = state.targetGridPosition.slice();
+                    //vec3.add(testPosition, state.targetGridPosition, gridOffset);
+                    nextCubeIndex = cubeIndex(parseInt(state.targetGridPosition[0] + size/2 + grav.y[0]), parseInt(state.targetGridPosition[1] + size/2 + grav.y[1]), parseInt(state.targetGridPosition[2] + size/2 + grav.y[2]));
+                    //nextCubeIndex = cubeIndex(parseInt(testPosition[0]), parseInt(testPosition[1]), parseInt(testPosition[2]))
                     let nextCube = state.cubes[nextCubeIndex]
-                    
-                    //console.log(nextCubeIndex);
-                    
+                    // console.log(nextCubeIndex);
+                    // console.log(testPosition);
+                    // console.log(nextCube);
                     if (nextCube != null && nextCubeIndex != undefined)
                     {
+                        //console.log(nextCubeIndex);
                         //console.log(state.currentPlayerPosition);
-
-                        //vec3.negate(state.camera.up, returnMat4Logically(state.gravityMatrix).y)
                         //setToCubePosition(state, state.playerObject, nextCubeIndex);
-                        state.currentPlayerPosition = nextCube.model.position;
+                        //\\state.targetGridPosition = nextCube.model.position.slice();
                         //console.log(state.currentPlayerPosition);
-                        state.nextPlayerPosition = nextCube.model.position;
-                        //state.animationState = animation.DROPPING;
-
+                        state.nextPlayerPosition = nextCube.model.position.slice();
+                        let playerOffset = vec3.fromValues(0.5, 0.5, 0.5);
+                        vec3.add(state.nextPlayerPosition, nextCube.model.position, playerOffset);
+                        //state.nextPlayerPosition = vec3.fromValues(nextCube.model.position[0] + 0.5, nextCube.model.position[1] + 0.5, nextCube.model.position[2] + 0.5)
+                        state.animationState = animation.DROPPING;
+                        previousDistance = 50
+                        distance = 40;
+                        //console.log(state.nextPlayerPosition);
                     }
+                }
+                else if (state.animationState === animation.DROPPING)
+                {
+                    
+                    previousDistance = distance;
+                    distance = vec3.distance(state.playerObject.model.position, state.nextPlayerPosition)
+                    //console.log(previousDistance)
+                    //console.log(distance);
+                    //player moving down still
+                    if (distance <= previousDistance)
+                    {
+                        mat4.rotateY(state.playerObject.model.rotation, state.playerObject.model.rotation, 3 * deltaTime);
+                        mat4.rotateX(state.playerObject.model.rotation, state.playerObject.model.rotation, 3 * deltaTime);
+                        let down = returnMat4Logically(state.gravityMatrix).y;
+                        let delta = vec3.create();
+                        vec3.scale(delta, down, deltaTime * 3);
+                        //console.log(delta);
+                        vec3.add(state.playerObject.model.position, state.playerObject.model.position, delta); //move down
+                        sortedObjects = null;
+                    } 
+                    //player has moved past, stop animation
+                    else
+                    {
+                        //console.log(nextCubeIndex);
+                        setToCubePosition(state, state.playerObject, nextCubeIndex); //correct position
+                        state.targetGridPosition = state.cubes[nextCubeIndex].model.position.slice();
+                        state.animationState = null;
+                    }
+                    // console.log(state.playerObject.model.position)
+                    // console.log(state.nextPlayerPosition);
+                    // console.log(vec3.distance(state.playerObject.model.position, state.nextPlayerPosition))
                 }
                 /*else {
                     //vec3.fromValues(playerInitialPosition[0] + 0.5, playerInitialPosition[1] + 0.5, playerInitialPosition[2] + 0.5);
@@ -447,8 +490,8 @@ function startRendering(gl, state) {
                 }*/
             }
             if (state.lights[0] != undefined && state.lights[1] != undefined){
-                mat4.rotateY(state.lights[0].model.rotation, state.lights[0].model.rotation, 10 * deltaTime);
-                mat4.rotateX(state.lights[1].model.rotation, state.lights[1].model.rotation, 10 * deltaTime);
+                mat4.rotateY(state.lights[0].model.rotation, state.lights[0].model.rotation, 3 * deltaTime);
+                mat4.rotateX(state.lights[1].model.rotation, state.lights[1].model.rotation, 3 * deltaTime);
             }
             // Draw our scene
             drawScene(gl, deltaTime, state);
@@ -479,14 +522,6 @@ function drawScene(gl, deltaTime, state) {
             return k - h;
         }); 
     }
-    // if (state.freeCamera.use){
-    //     sortedObjects = state.objects.sort((a, b) => {
-    //         var h = vec3.distance(state.camera.position, a.model.position);
-    //         var k = vec3.distance(state.camera.position, b.model.position);
-            
-    //         return k - h;
-    //     }); 
-    // }
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.enable(gl.DEPTH_TEST); // Enable depth testing
     //gl.enable(gl.CULL_FACE);
@@ -514,20 +549,10 @@ function drawScene(gl, deltaTime, state) {
 
     sortedObjects.map((object) => {
         if (object.loaded) {
-            // if (object.type === "light") {
-            //     let light = object;
-            //     console.log(light);
-            //     for (let j = 0; j < 3; j++) {
-            //         lightPositionArray.push(light.model.position[j]);
-            //         lightColourArray.push(light.colour[j]);
-            //     }
-            //     lightStrengthArray.push(light.strength);
-            // }
             gl.useProgram(object.programInfo.program);
             {
-                //console.log(object.alpha);
+                //console.log(lightPositionArray[1]);
                 if (object.material.alpha < 1.0) {
-                    // TODO turn off depth masking DONE
                     // enable blending and specify blending function 
                     // clear depth for correct transparency rendering 
                     gl.depthMask(false);
@@ -535,7 +560,6 @@ function drawScene(gl, deltaTime, state) {
                     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
                 }
                 else {
-                    // TODO disable blending 
                     // enable depth masking and z-buffering
                     // specify depth function
                     // clear depth with 1.0
