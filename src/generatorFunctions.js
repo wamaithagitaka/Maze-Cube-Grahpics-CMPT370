@@ -1,5 +1,10 @@
 var size = 5;
 
+const animation = {
+	ROTATING: "rotating",
+	DROPPING: "dropping",
+}
+
 function generateScene(glContext, vertShader, fragShader) {
 	let scene = {
 		objects: [],
@@ -105,5 +110,18 @@ function setToCubePosition(state, object, cubeIndex)
 
 		//1 is due to half of the cube scale
 		object.model.position = vec3.fromValues(playerInitialPosition[0] + 0.5, playerInitialPosition[1] + 0.5, playerInitialPosition[2] + 0.5);
+	}
+}
+
+function getAdjustedCubePosition(state, cubeIndex)
+{
+	if (state.cubes[cubeIndex] === null) {
+		console.log ("Tried to grab null cube index");
+	}
+	else {
+		let position = vec3.fromValues(0.5, 0.5, 0.5);
+
+		//1 is due to half of the cube scale
+		vec3.add(position, position, state.cubes[cubeIndex].model.position);
 	}
 }

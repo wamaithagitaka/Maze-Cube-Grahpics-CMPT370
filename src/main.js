@@ -1,6 +1,7 @@
 var total = 0;
 var state = {};
 var stats = new Stats();
+var size = 5;
 
 window.onload = () => {
     parseSceneFile("./statefiles/alienScene.json", state, main);
@@ -34,6 +35,7 @@ function createMesh(mesh, object) {
         }
         addObjectToScene(state, testModel);
         //due to timing issues we're slapping everything here
+        //testModel.centroid = vec3.add(testModel.centroid, testModel.centroid, vec3.fromValues(0.5, 0.5, 0.5))
         state.playerObject = testModel; 
         setToCubePosition(state, state.playerObject, cubeIndex(Math.floor(size/2), Math.floor(size/2), 0));
         state.currentPlayerPosition = state.cubes[cubeIndex(Math.floor(size/2), Math.floor(size/2), 0)].model.position;
@@ -54,8 +56,7 @@ function createMesh(mesh, object) {
     }
 }
 
-/**
- * 
+/*
  * @param {string - type of object to be added to the scene} type 
  * @param {string - url of the model being added to the game} url 
  * @purpose **WIP** Adds a new object to the scene from using the gui to add said object 
@@ -222,7 +223,7 @@ function main() {
         centerObject: null,
         playerObject: null,
         cubes: null,
-        playerMoving: {},
+        animationState: null, //animation.DROPPING,
         currentPlayerPosition: null,
         gravity: {
             position: vec3.fromValues(0.0, 0.0, -1.0),
@@ -231,6 +232,15 @@ function main() {
         },
         gravityMatrix: null,
         lights: [],
+        nextPlayerPosition: null,
+        nextRotationPosition: null,
+        freeCamera: {
+            name: 'camera',
+            position: vec3.fromValues(0, 0, -6 - size/2),
+            center: vec3.fromValues(0, 0, 0),
+            up: vec3.fromValues(0.0, 1.0, 0.0),
+            use: false,
+        },
     };
 
     state.numLights = state.lights.length;
@@ -251,13 +261,14 @@ function main() {
     state.cubes = world.objects;
     //setup gravity matrix
     state.gravityMatrix = mat4.create();
-    mat4.lookAt(
+    mat4.invert(state.gravityMatrix, state.gravityMatrix); //rotateRoundZ(state.gravityMatrix, Math.PI);
+    /*mat4.lookAt(
         state.gravityMatrix,
         state.gravity.position,
         state.gravity.center,
         state.gravity.up,
-    );
-    logMat4Legibly(state.gravityMatrix);
+    );*/
+    console.log(returnMat4Legibly(state.gravityMatrix));
     //console.log(state.objects);
 
     //iterate through the level's objects and add them
@@ -368,8 +379,20 @@ function startRendering(gl, state) {
             if (state.mouse['camMove']) {
                 //vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (state.camera.yaw - 0.25) * deltaTime * state.mouse.sensitivity);
                 //vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
-                //vec3.rotateY(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
+                vec3.rotateY(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
+                state.freeCamera.use = true;
+                //sortedObjects = null; //sorting is activated but doesn't do anything
             }
+            else {
+                state.freeCamera.use = false;
+                //console.log("here");
+                state.freeCamera.position = state.camera.position.slice();
+            }
+
+            tmp = returnMat4Logically(state.gravityMatrix);
+                state.camera.up = vec3.fromValues(-tmp.y[0], -tmp.y[1], -tmp.y[2]);
+                state.camera.position = vec3.fromValues(tmp.z[0], tmp.z[1], tmp.z[2]);
+                vec3.scale(state.camera.position, state.camera.position, -9);
 
             //UGHHHH
             if (state.playerObject != null)
@@ -377,21 +400,51 @@ function startRendering(gl, state) {
                 mat4.rotateY(state.playerObject.model.rotation, state.playerObject.model.rotation, 3 * deltaTime);
                 mat4.rotateX(state.playerObject.model.rotation, state.playerObject.model.rotation, 3 * deltaTime);
                 //move only if we're not locked in "animation"
-                if (state.playerMoving != true)
+                if (state.animationState === null)
                 {
-                    let grav = logMat4Legibly(state.gravityMatrix);
-                    let nextCubeIndex = cubeIndex(parseInt(state.currentPlayerPosition[0] + size/2 + grav.i[1]), parseInt(state.currentPlayerPosition[1] + size/2 + grav.j[1]), parseInt(state.currentPlayerPosition[2] + size/2 + grav.k[1]));
+                    let grav = returnMat4Logically(state.gravityMatrix);
+                    let nextCubeIndex = cubeIndex(parseInt(state.currentPlayerPosition[0] + size/2 + grav.y[0]), parseInt(state.currentPlayerPosition[1] + size/2 + grav.y[1]), parseInt(state.currentPlayerPosition[2] + size/2 + grav.y[2]));
                     let nextCube = state.cubes[nextCubeIndex]
                     
                     //console.log(nextCubeIndex);
                     
                     if (nextCube != null && nextCubeIndex != undefined)
                     {
-                        setToCubePosition(state, state.playerObject, nextCubeIndex);
+                        //console.log(state.currentPlayerPosition);
+
+                        //vec3.negate(state.camera.up, returnMat4Logically(state.gravityMatrix).y)
+                        //setToCubePosition(state, state.playerObject, nextCubeIndex);
                         state.currentPlayerPosition = nextCube.model.position;
+                        //console.log(state.currentPlayerPosition);
+                        state.nextPlayerPosition = nextCube.model.position;
+                        //state.animationState = animation.DROPPING;
+
                     }
-                    //state.playerMoving = true;
                 }
+                /*else {
+                    //vec3.fromValues(playerInitialPosition[0] + 0.5, playerInitialPosition[1] + 0.5, playerInitialPosition[2] + 0.5);
+                    let temp = vec3.create();
+                    vec3.sub(temp, state.nextPlayerPosition, state.currentPlayerPosition);
+                    // let distance = vec3.create();
+                    // vec3.sub(distance, state.nextPlayerPosition, state.playerObject.model.position);
+                    // let acceptedRange = vec3.create();
+                    // vec3.scale(acceptedRange, temp, 0.1);
+                    let offset = vec3.fromValues(0.5, 0.5, 0.5);
+                    let offsetPlayerPosition = vec3.create();
+                    vec3.add(offsetPlayerPosition, state.playerObject.model.position, offset);
+
+                    console.log(state.nextPlayerPosition);
+                    console.log(offsetPlayerPosition)
+                    console.log(vec3.distance(offsetPlayerPosition, state.nextPlayerPosition));
+                    //vec3.scale(temp, temp, 10);
+                    if (vec3.distance(state.playerObject.model.position, state.nextPlayerPosition) >= 0.1)
+                    {
+                        vec3.add(state.playerObject.model.position, state.playerObject.model.position, temp * deltaTime);
+                    }
+                    else{
+                        state.animation = false;
+                    }
+                }*/
             }
             if (state.lights[0] != undefined && state.lights[1] != undefined){
                 mat4.rotateY(state.lights[0].model.rotation, state.lights[0].model.rotation, 10 * deltaTime);
@@ -426,6 +479,14 @@ function drawScene(gl, deltaTime, state) {
             return k - h;
         }); 
     }
+    // if (state.freeCamera.use){
+    //     sortedObjects = state.objects.sort((a, b) => {
+    //         var h = vec3.distance(state.camera.position, a.model.position);
+    //         var k = vec3.distance(state.camera.position, b.model.position);
+            
+    //         return k - h;
+    //     }); 
+    // }
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.enable(gl.DEPTH_TEST); // Enable depth testing
     //gl.enable(gl.CULL_FACE);
@@ -497,12 +558,23 @@ function drawScene(gl, deltaTime, state) {
                 state.projectionMatrix = projectionMatrix;
 
                 var viewMatrix = mat4.create();
-                mat4.lookAt(
-                    viewMatrix,
-                    state.camera.position,
-                    state.camera.center,
-                    state.camera.up,
-                );
+                if (state.freeCamera.use){
+                    mat4.lookAt(
+                        viewMatrix,
+                        state.freeCamera.position,
+                        state.freeCamera.center,
+                        state.freeCamera.up,
+                    );
+                }
+                else {
+                    mat4.lookAt(
+                        viewMatrix,
+                        state.camera.position,
+                        state.camera.center,
+                        state.camera.up,
+                    );
+                }
+
                 gl.uniformMatrix4fv(object.programInfo.uniformLocations.view, false, viewMatrix);
 
                 gl.uniform3fv(object.programInfo.uniformLocations.cameraPosition, state.camera.position);
@@ -600,7 +672,7 @@ function drawScene(gl, deltaTime, state) {
     });
 }
 
-function logMat4Legibly(matrix)
+function returnMat4Legibly(matrix)
 {
     let mat4 = {
         i: [], //x
@@ -615,7 +687,48 @@ function logMat4Legibly(matrix)
         mat4.k.push(matrix[i + 4 * 2]);
         mat4.w.push(matrix[i + 4 * 3]);
     }
-    console.log(mat4);
+    //console.log(mat4);
 
     return mat4;
+}
+
+function returnMat4Logically(matrix)
+{
+    let mat4 = {
+        x: [], //x
+        y: [], //y
+        z: [], //z
+        w: []
+    }
+    for (var i = 0; i < 4; i++)
+    {
+        mat4.x.push(matrix[i * 4]);
+        mat4.y.push(matrix[i * 4 + 1]);
+        mat4.z.push(matrix[i * 4 + 2]);
+        mat4.w.push(matrix[i * 4 + 3]);
+    }
+    //console.log(mat4);
+
+    return mat4;
+}
+
+function rotateRoundZ(matrix, rad){
+    let temp = mat4.create();
+    mat4.rotateZ(temp, temp, rad);
+    mat4.mul(matrix, temp, matrix);
+    return matrix.map(element => Math.round(element))
+}
+
+function rotateRoundX(matrix, rad){
+    let temp = mat4.create();
+    mat4.rotateX(temp, temp, rad);
+    mat4.mul(matrix, temp, matrix);
+    return matrix.map(element => Math.round(element))
+}
+
+function rotateRoundY(matrix, rad){
+    let temp = mat4.create();
+    mat4.rotateY(temp, temp, rad);
+    mat4.mul(matrix, temp, matrix);
+    return matrix.map(element => Math.round(element))
 }

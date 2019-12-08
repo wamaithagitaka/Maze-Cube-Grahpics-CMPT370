@@ -22,44 +22,54 @@ function startGame(state) {
         switch (event.code) {
             case "KeyW":
                 state.keyboard[event.key] = true;
-                vec3.rotateX(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), 90 * (Math.PI/180));
-                mat4.rotateY(state.gravityMatrix, state.gravityMatrix,  90 * (Math.PI/180))
-
+                //vec3.rotateX(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), Math.PI * 0.5);
+                state.gravityMatrix = rotateRoundX(state.gravityMatrix, Math.PI * -0.5)
+                //console.log(returnMat4Legibly(state.gravityMatrix));
                 sortedObjects = null;
                 break;
 
             case "KeyS":
                 state.keyboard[event.key] = true;
-                vec3.rotateX(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), -90 * (Math.PI/180));
-                mat4.rotateX(state.gravityMatrix, state.gravityMatrix,  -90 * (Math.PI/180))
-
+                //vec3.rotateX(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), Math.PI * -0.5);
+                state.gravityMatrix = rotateRoundX(state.gravityMatrix, Math.PI * 0.5);
+                //console.log(returnMat4Legibly(state.gravityMatrix));
                 sortedObjects = null;
                 break;
 
             case "KeyA":
                 state.keyboard[event.key] = true;
-                vec3.rotateY(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), -90 * (Math.PI/180));
+                //vec3.rotateY(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), Math.PI * 0.5);
+                state.gravityMatrix = rotateRoundY(state.gravityMatrix, -Math.PI * 0.5);
                 sortedObjects = null;
                 break;
 
             case "KeyD":
+                //console.log(state.camera.position);
                 state.keyboard[event.key] = true;
-                vec3.rotateY(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), 90 * (Math.PI/180));
+                //vec3.rotateY(state.camera.position, state.camera.position, vec3.fromValues(0,0,0), Math.PI * -0.5);
+
+                state.gravityMatrix = rotateRoundY(state.gravityMatrix, Math.PI * 0.5);
+                //console.log(returnMat4Legibly(state.gravityMatrix));
+                //console.log(state.camera.position);
                 sortedObjects = null;
                 break;
 
             case "KeyE":
-                vec3.rotateZ(state.camera.up, state.camera.up, vec3.fromValues(0,0,0), 90 * (Math.PI/180));
-                //mat4.rotateZ(state.gravityMatrix, state.gravityMatrix,  90 * (Math.PI/180))
-                sortedObjects = null;
+                    //vec3.rotateZ(state.camera.up, state.camera.up, vec3.fromValues(0,0,0), Math.PI * -0.5);
+
+                    state.gravityMatrix = rotateRoundZ(state.gravityMatrix, Math.PI * 0.5);
+                    sortedObjects = null;
                 break;
 
             case "KeyQ":
-                vec3.rotateZ(state.camera.up, state.camera.up, vec3.fromValues(0,0,0), -90 * (Math.PI/180));
-                mat4.rotateZ(state.gravityMatrix, state.gravityMatrix,  90 * (Math.PI/180))
+                // console.log(returnMat4Legibly(state.gravityMatrix));
+                // console.log(returnMat4Logically(state.gravityMatrix));
+                //vec3.rotateZ(state.camera.up, state.camera.up, vec3.fromValues(0,0,0), Math.PI * 0.5);
+                
+
+                state.gravityMatrix = rotateRoundZ(state.gravityMatrix, Math.PI * -0.5);
+                //console.log(returnMat4Legibly(state.gravityMatrix))
                 sortedObjects = null;
-                //console.log(state.camera);
-                //mat4.rotateZ(state.centerObject.model.rotation, state.centerObject.model.rotation, 45 * (Math.PI / 180));
                 break;
                 
             default:
