@@ -24,37 +24,41 @@ function startGame(state) {
             case "KeyW":
                 state.keyboard[event.key] = true;
                 state.gravityMatrix = rotateRoundX(state.gravityMatrix, Math.PI * -0.5)
+                state.animationState = animation.ROTATING;
                 sortedObjects = null;
                 break;
 
             case "KeyS":
                 state.keyboard[event.key] = true;
                 state.gravityMatrix = rotateRoundX(state.gravityMatrix, Math.PI * 0.5);
+                state.animationState = animation.ROTATING;
                 sortedObjects = null;
                 break;
 
             case "KeyA":
                 state.keyboard[event.key] = true;
                 state.gravityMatrix = rotateRoundY(state.gravityMatrix, -Math.PI * 0.5);
+                state.animationState = animation.ROTATING;
                 sortedObjects = null;
                 break;
 
             case "KeyD":
                 state.keyboard[event.key] = true;
                 state.gravityMatrix = rotateRoundY(state.gravityMatrix, Math.PI * 0.5);
+                state.animationState = animation.ROTATING;
                 sortedObjects = null;
                 break;
 
             case "KeyE":
                 state.gravityMatrix = rotateRoundZ(state.gravityMatrix, Math.PI * 0.5);
                 sortedObjects = null;
+                state.animationState = animation.ROTATING;
                 break;
 
             case "KeyQ":
-                console.log(returnMat4Legibly(state.gravityMatrix));
                 state.gravityMatrix = rotateRoundZ(state.gravityMatrix, Math.PI * -0.5);
-                console.log(returnMat4Legibly(state.gravityMatrix));
                 sortedObjects = null;
+                state.animationState = animation.ROTATING;
                 break;
                 
             default:

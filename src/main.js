@@ -374,11 +374,23 @@ function startRendering(gl, state) {
 
             //correct camera
             let tmp = returnMat4Logically(state.gravityMatrix);
-            state.camera.up = vec3.fromValues(-tmp.y[0], -tmp.y[1], -tmp.y[2]);
-            state.camera.position = vec3.fromValues(tmp.z[0], tmp.z[1], tmp.z[2]);
-            vec3.scale(state.camera.position, state.camera.position, -9);
 
+            if (state.animationState === animation.ROTATING)
+            {
+                state.camera.targetPosition = vec3.fromValues(tmp.z[0], tmp.z[1], tmp.z[2]);
+                vec3.scale(state.camera.targetPosition, state.camera.targetPosition, -9);
+            }
+            else
+            {
+                state.camera.up = vec3.fromValues(-tmp.y[0], -tmp.y[1], -tmp.y[2]);
+                state.camera.position = vec3.fromValues(tmp.z[0], tmp.z[1], tmp.z[2]);
+                vec3.scale(state.camera.position, state.camera.position, -9);
+            }
+            
 
+            state.lightIndices.forEach(object => {
+                object.model.position = state.camera.position;
+            })
 
             if (state.mouse['camMove']) {
                 //vec3.rotateY(state.camera.center, state.camera.center, state.camera.position, (state.camera.yaw - 0.25) * deltaTime * state.mouse.sensitivity);
@@ -393,7 +405,6 @@ function startRendering(gl, state) {
                 else if (tmp.y[1] != 0)
                 {
                     //console.log("b")
-
                     vec3.rotateX(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-tmp.y[1] * state.mouse.rateY * deltaTime * state.mouse.sensitivity))
                     vec3.rotateY(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (tmp.y[1] * state.mouse.rateX * deltaTime * state.mouse.sensitivity));
                 }
@@ -415,13 +426,14 @@ function startRendering(gl, state) {
             else {
                 if (doOnce)
                 {
-                    state.freeCamera.use = false;
-                    //console.log("here");
-                    state.freeCamera.position = state.camera.position.slice();
-                    state.freeCamera.up = state.camera.up.slice();
+            
                     sortedObjects = null;  
                     doOnce = false;
                 }
+                state.freeCamera.use = false;
+                    //console.log("here");
+                    state.freeCamera.position = state.camera.position.slice();
+                    state.freeCamera.up = state.camera.up.slice();
                 
             }
 
@@ -451,7 +463,23 @@ function startRendering(gl, state) {
                 else if (state.animationState === animation.ROTATING)
                 { // player keypress activates this animation state first
                     let grav = returnMat4Logically(state.gravityMatrix);
-
+                    previousDistance = distance;
+                    distance = vec3.distance(state.camera.position, state.camera.targetPosition)
+                    if (distance > 0.8)
+                    {
+                        let delta = vec3.create();
+                        let direction = vec3.create();
+                        vec3.sub(direction, state.camera.targetPosition, state.camera.position);
+                        vec3.scale(delta, direction, deltaTime * 4);
+                        vec3.add(state.camera.position, state.camera.position, delta);
+                        sortedObjects = null;
+                    }
+                    else
+                    {
+                        console.log("hello")
+                        state.animationState = null;
+                    }
+                    
                 }
                 else if (state.animationState === animation.DROPPING)
                 {
@@ -459,7 +487,7 @@ function startRendering(gl, state) {
                     previousDistance = distance;
                     distance = vec3.distance(state.playerObject.model.position, state.nextPlayerPosition)
                     //player moving down still
-                    if (distance <= previousDistance)
+                    if (distance < previousDistance)
                     {
                         mat4.rotateY(state.playerObject.model.rotation, state.playerObject.model.rotation, 3 * deltaTime);
                         mat4.rotateX(state.playerObject.model.rotation, state.playerObject.model.rotation, 3 * deltaTime);
@@ -468,7 +496,7 @@ function startRendering(gl, state) {
                         vec3.scale(delta, down, deltaTime * 3);
                         //console.log(delta);
                         vec3.add(state.playerObject.model.position, state.playerObject.model.position, delta); //move down
-                        sortedObjects = null;
+                        //sortedObjects = null;
                     } 
                     //player has moved past, stop animation
                     else
@@ -481,8 +509,8 @@ function startRendering(gl, state) {
                 }
             }
             if (state.lights[0] != undefined && state.lights[1] != undefined){
-                mat4.rotateY(state.lights[0].model.rotation, state.lights[0].model.rotation, 3 * deltaTime);
-                mat4.rotateX(state.lights[1].model.rotation, state.lights[1].model.rotation, 3 * deltaTime);
+                //mat4.rotateY(state.lights[0].model.rotation, state.lights[0].model.rotation, 3 * deltaTime);
+                //mat4.rotateX(state.lights[1].model.rotation, state.lights[1].model.rotation, 3 * deltaTime);
             }
             // Draw our scene
             drawScene(gl, deltaTime, state);
