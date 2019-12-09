@@ -4,7 +4,7 @@ var stats = new Stats();
 var distance = 400;
 var previousDistance = 500;
 var nextCubeIndex;
-
+var win = false;
 window.onload = () => {
     parseSceneFile("./statefiles/alienScene.json", state, main);
 }
@@ -250,7 +250,7 @@ function main() {
     //UGHHHH
     //generate scene
     let world = generateScene(gl, vertShaderSample, fragShaderSample);
-    console.log(world);
+    //console.log(world);
     world.objects.forEach((element) => 
     {
         if (element != null){
@@ -265,7 +265,7 @@ function main() {
     state.gravityMatrix = mat4.create();
     mat4.invert(state.gravityMatrix, state.gravityMatrix); 
     console.log(returnMat4Legibly(state.gravityMatrix));
-    //console.log(state.objects);
+    hardcodeMyMazeThanks(state);
 
     //iterate through the level's objects and add them
     state.level.objects.map((object) => {
@@ -428,7 +428,7 @@ function startRendering(gl, state) {
                 {
             
                     sortedObjects = null;  
-                    doOnce = false;
+                    //doOnce = false;
                 }
                 state.freeCamera.use = false;
                     //console.log("here");
@@ -448,16 +448,28 @@ function startRendering(gl, state) {
                     //player is always offset by half of the cube size (origin at 0, 0, 0; "cube origin/middle" at size/2, size/2, size/2)
                     nextCubeIndex = cubeIndex(parseInt(state.targetGridPosition[0] + size/2 + grav.y[0]), parseInt(state.targetGridPosition[1] + size/2 + grav.y[1]), parseInt(state.targetGridPosition[2] + size/2 + grav.y[2]));
                     let nextCube = state.cubes[nextCubeIndex]
-                    if (nextCube != null && nextCubeIndex != undefined)
+                    if (nextCube != undefined && nextCube.material.alpha >= 0.8)
                     {
-                        //calculate next location to transition to
-                        state.nextPlayerPosition = nextCube.model.position.slice();
-                        let playerOffset = vec3.fromValues(0.5, 0.5, 0.5);
-                        vec3.add(state.nextPlayerPosition, nextCube.model.position, playerOffset);
+                        
+                    }
+                    else
+                    {
+                        if (nextCube != null && nextCubeIndex != undefined)
+                        {
+                            //calculate next location to transition to
+                            state.nextPlayerPosition = nextCube.model.position.slice();
+                            let playerOffset = vec3.fromValues(0.5, 0.5, 0.5);
+                            vec3.add(state.nextPlayerPosition, nextCube.model.position, playerOffset);
 
-                        state.animationState = animation.DROPPING;
-                        previousDistance = 50
-                        distance = 40;
+                            state.animationState = animation.DROPPING;
+                            previousDistance = 50
+                            distance = 40;
+                            if (nextCube.material.ambient[0] > 0.5)
+                            {
+                                win = true;
+                            }
+                        //CRUNCH TIME WOOOOOO
+                        }
                     }
                 }
                 else if (state.animationState === animation.ROTATING)
@@ -476,7 +488,6 @@ function startRendering(gl, state) {
                     }
                     else
                     {
-                        console.log("hello")
                         state.animationState = null;
                     }
                     
@@ -505,13 +516,14 @@ function startRendering(gl, state) {
                         setToCubePosition(state, state.playerObject, nextCubeIndex); //correct position
                         state.targetGridPosition = state.cubes[nextCubeIndex].model.position.slice();
                         state.animationState = null;
+                        if (win)
+                        {                                
+                            alert("You win!")
+                        }
                     }
                 }
             }
-            if (state.lights[0] != undefined && state.lights[1] != undefined){
-                //mat4.rotateY(state.lights[0].model.rotation, state.lights[0].model.rotation, 3 * deltaTime);
-                //mat4.rotateX(state.lights[1].model.rotation, state.lights[1].model.rotation, 3 * deltaTime);
-            }
+
             // Draw our scene
             drawScene(gl, deltaTime, state);
         }

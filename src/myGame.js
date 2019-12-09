@@ -91,9 +91,9 @@ function startGame(state) {
                 break;
 
             case "KeyX":
-                // state.lightIndices.forEach((element) => {
-                //     element.strength -= 0.5;
-                // })
+                state.lightIndices.forEach((element) => {
+                    element.strength -= 0.5;
+                })
                 break;
 
             default:

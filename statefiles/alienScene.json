@@ -3,9 +3,10 @@
     "objects" : [
         {
             "name" : "apple",
-            "material" : {"diffuse" : [0.8, 0.2, 0.2], "ambient": [0.001, 0.001, 0.001], "specular": [0.8, 0.8, 0.8], "n":50, "alpha":1.0},
+            "material" : {"diffuse" : [0.8, 0.2, 0.2], "ambient": [0.5, 0.1, 0.1], "specular": [0.8, 0.8, 0.8], "n":2, "alpha":1.0},
             "type": "player",
             "model" : "./models/apple.obj",
+            "texture" : "./materials/fluffy.jpg",
             "parent" : null,
             "position": [0.0, 0.0, 1.0],
             "scale": [2.0, 2.0, 2.0]
@@ -18,7 +19,7 @@
             "material" : {"diffuse" : [1.0, 1.0, 1.0], "ambient": [0.1, 0.1, 0.1], "specular": [0.3, 0.3, 0.3], "n":1000, "alpha":1.0},
             "colour" : [1.0, 1.0, 1.0],
             "parent" : null,
-            "strength" : 1.00
+            "strength" : 0.85
         },
         {
             "name": "light1",
@@ -28,7 +29,7 @@
             "material" : {"diffuse" : [1.0, 1.0, 1.0], "ambient": [0.1, 0.1, 0.1], "specular": [0.3, 0.3, 0.3], "n":1000, "alpha":1.0},
             "colour" : [0, 1.0, 1.0],
             "parent" : null,
-            "strength" : 1.00
+            "strength" : 0.85
         }
     ]
 }

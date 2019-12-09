@@ -18,7 +18,7 @@ function generateScene(glContext, vertShader, fragShader) {
 	let ambient = vec3.fromValues(0.5,0.5,0.5);
 	let diffuse = vec3.fromValues(0.5,0.5,0.5);
 	let specular = vec3.fromValues(1.0,1.0,1.0);
-	let n = 5.0;
+	let n = 1000.0;
     let alpha = 0.05;
     let name = "";
 
@@ -91,6 +91,7 @@ function createCube(glContext, name, parent, ambient, diffuse, specular, n, alph
 	return cube
 }
 
+//k = z, i = x, j = y; 0,0,0 is at the very top left closest to the camera (with current configuration)
 function cubeIndex(i, j, k)
 {
 	if (i < size && i >= 0 && j < size && j >= 0 && k < size && k >= 0)
@@ -124,4 +125,75 @@ function getAdjustedCubePosition(state, cubeIndex)
 		//1 is due to half of the cube scale
 		vec3.add(position, position, state.cubes[cubeIndex].model.position);
 	}
+}
+
+//Ideally there's a procedural generator here, but who has time for that
+function hardcodeMyMazeThanks(state)
+{
+	//face A @ size 5
+	turnCubeToWall(state, 0, 0, 0);
+	turnCubeToWall(state, 0, 1, 0);
+	turnCubeToWall(state, 1, 1, 0);
+	turnCubeToWall(state, 2, 1, 0);
+	turnCubeToWall(state, 3, 0, 0);
+	turnCubeToWall(state, 4, 0, 0);
+	turnCubeToWall(state, 3, 2, 0);
+	turnCubeToWall(state, 1, 3, 0);
+	turnCubeToWall(state, 0, 4, 0);
+	turnCubeToWall(state, 2, 4, 0);
+	turnCubeToWall(state, 4, 4, 0);
+	turnCubeToWall(state, 4, 1, 0);
+	//face B @ size 5
+	turnCubeToWall(state, 0, 0, 1);
+	turnCubeToWall(state, 0, 0, 2);
+	turnCubeToWall(state, 0, 0, 4);
+	turnCubeToWall(state, 0, 1, 2);
+	turnCubeToWall(state, 0, 2, 2);
+	turnCubeToWall(state, 0, 2, 4);
+	turnCubeToWall(state, 0, 3, 1);
+	turnCubeToWall(state, 0, 4, 3);
+	turnCubeToWall(state, 0, 4, 4);
+
+	//face C @ size 5
+	turnCubeToWall(state,1,0,4);
+	turnCubeToWall(state,4,0,4);
+	turnCubeToWall(state,2,1,4);
+	turnCubeToWall(state,3,1,4);
+	turnCubeToWall(state,1,2,4);
+	turnCubeToWall(state,3,2,4);
+	turnCubeToWall(state,1,3,4);
+	turnCubeToWall(state,3,3,4);
+	turnCubeToWall(state,1,4,4);
+	turnCubeToWall(state,4,4,4);
+	turnCubeToEnd(state,2,2,4);
+
+	//face D @ size 5
+	turnCubeToWall(state,4,1,1);
+	turnCubeToWall(state,4,1,2);
+	turnCubeToWall(state,4,2,3);
+	turnCubeToWall(state,4,3,1);
+	turnCubeToWall(state,4,4,2);
+	turnCubeToWall(state,4,4,3);
+
+	//face E @ size 5
+	turnCubeToWall(state,3,4,1);
+	turnCubeToWall(state,1,4,2);
+	turnCubeToWall(state,3,4,2);
+
+	//Face F @ size 5
+	turnCubeToWall(state,2,0,2);
+	turnCubeToWall(state,3,0,2);
+	turnCubeToWall(state,3,0,3);
+}
+
+function turnCubeToWall(state,x,y,z)
+{
+	state.cubes[cubeIndex(x, y, z)].material.alpha = 0.8;
+	state.cubes[cubeIndex(x, y, z)].material.ambient = vec3.fromValues(0.3,0.3,0.3);
+}
+
+function turnCubeToEnd(state,x,y,z)
+{
+	state.cubes[cubeIndex(x, y, z)].material.alpha = 0.75;
+	state.cubes[cubeIndex(x, y, z)].material.ambient = vec3.fromValues(0.55,0.55,0);
 }
