@@ -386,36 +386,43 @@ function startRendering(gl, state) {
                 if (tmp.y[0] != 0)
                 {
                     //console.log("a")
-                    //need to change negative or not in an if 
-                    vec3.rotateY(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateY * deltaTime * state.mouse.sensitivity))
-                    vec3.rotateX(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
+                    //need to change to better account for the matrix 
+                    vec3.rotateY(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (tmp.y[0] * state.mouse.rateY * deltaTime * state.mouse.sensitivity))
+                    vec3.rotateX(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (tmp.y[0] * state.mouse.rateX * deltaTime * state.mouse.sensitivity));
                 }
                 else if (tmp.y[1] != 0)
                 {
                     //console.log("b")
 
-                    vec3.rotateX(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateY * deltaTime * state.mouse.sensitivity))
-                    vec3.rotateY(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
+                    vec3.rotateX(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-tmp.y[1] * state.mouse.rateY * deltaTime * state.mouse.sensitivity))
+                    vec3.rotateY(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (tmp.y[1] * state.mouse.rateX * deltaTime * state.mouse.sensitivity));
                 }
                 else if (tmp.y[2] != 0)
                 {
                     //console.log("c")
 
-                    vec3.rotateY(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateY * deltaTime * state.mouse.sensitivity))
-                    vec3.rotateZ(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-state.mouse.rateX * deltaTime * state.mouse.sensitivity));
+                    vec3.rotateY(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-tmp.y[2] * state.mouse.rateY * deltaTime * state.mouse.sensitivity))
+                    vec3.rotateZ(state.freeCamera.position, state.freeCamera.position, vec3.fromValues(0,0,0), (-tmp.y[2] * state.mouse.rateX * deltaTime * state.mouse.sensitivity));
                 }
                 // let forward = vec3.create();
                 // vec3.sub(forward, vec3.fromValues(0,0,0), state.freeCamera.position);
                 // vec3.normalize(forward, forward);
 
                 state.freeCamera.use = true;
-                //sortedObjects = null; //sorting is activated but doesn't do anything
+                sortedObjects = null;
+                doOnce = true; // for handling transparency one last time after spinning freecam to opposite side
             }
             else {
-                state.freeCamera.use = false;
-                //console.log("here");
-                state.freeCamera.position = state.camera.position.slice();
-                state.freeCamera.up = state.camera.up.slice();
+                if (doOnce)
+                {
+                    state.freeCamera.use = false;
+                    //console.log("here");
+                    state.freeCamera.position = state.camera.position.slice();
+                    state.freeCamera.up = state.camera.up.slice();
+                    sortedObjects = null;  
+                    doOnce = false;
+                }
+                
             }
 
             //UGHHHH
@@ -497,11 +504,14 @@ function startRendering(gl, state) {
  * @purpose Iterate through game objects and render the objects aswell as update uniforms
  */
 var sortedObjects = null; //limit calls because constantly sorting is unnecessary
+var doOnce = false;
 function drawScene(gl, deltaTime, state) {
     if (sortedObjects === null) {
+        let cam;
+        state.freeCamera.use ? cam = state.freeCamera : cam = state.camera;
         sortedObjects = state.objects.sort((a, b) => {
-            var h = vec3.distance(state.camera.position, a.model.position);
-            var k = vec3.distance(state.camera.position, b.model.position);
+            var h = vec3.distance(cam.position, a.model.position);
+            var k = vec3.distance(cam.position, b.model.position);
             
             return k - h;
         }); 
